@@ -79,6 +79,9 @@ import arrowImg from "./arrow.png";
 import attachmentImg from "./attachment.png";
 import crossIcon from "./cross-svgrepo-com.svg";
 import clipBoardIcon from "./clipboard-text-alt-svgrepo-com.svg";
+import chatImg from "./chat.png";
+import dbImg from "./image.png";
+import codeImg from "./code.png";
 
 export {
   brainwave,
@@ -153,4 +156,7 @@ export {
   attachmentImg,
   crossIcon,
   clipBoardIcon,
+  chatImg,
+  dbImg,
+  codeImg,
 };

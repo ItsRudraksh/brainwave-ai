@@ -9,4 +9,3 @@ app.listen(port, () => {
   connectToDB();
   console.log(`Server running on port: ${port}`);
 });
-

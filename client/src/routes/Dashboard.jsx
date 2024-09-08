@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { brainwave, arrowImg } from "../assets";
+import { brainwave, arrowImg, chatImg, dbImg, codeImg } from "../assets";
 const Dashboard = () => {
   const queryClient = useQueryClient();
 
@@ -40,27 +40,15 @@ const Dashboard = () => {
         </div>
         <div className="options hidden sm:flex w-full items-center justify-between gap-[50px]">
           <div className="option flex-1 flex flex-col gap-[10px] font-light text-sm p-5 border-2 border-solid border-[#555] rounded-[20px]">
-            <img
-              src="src\assets\chat.png"
-              alt=""
-              className="w-10 h-10 object-cover"
-            />
+            <img src={chatImg} alt="" className="w-10 h-10 object-cover" />
             <span className="whitespace-nowrap">Create a New Chat</span>
           </div>
           <div className="option flex-1 flex flex-col gap-[10px] font-light text-sm p-5 border-2 border-solid border-[#555] rounded-[20px]">
-            <img
-              src="src\assets\image.png"
-              alt=""
-              className="w-10 h-10 object-cover"
-            />
+            <img src={dbImg} alt="" className="w-10 h-10 object-cover" />
             <span className="whitespace-nowrap">Analyze Images</span>
           </div>
           <div className="option flex-1 flex flex-col gap-[10px] font-light text-sm p-5 border-2 border-solid border-[#555] rounded-[20px]">
-            <img
-              src="src\assets\code.png"
-              alt=""
-              className="w-10 h-10 object-cover"
-            />
+            <img src={codeImg} alt="" className="w-10 h-10 object-cover" />
             <span className="whitespace-nowrap">Help me with my Code</span>
           </div>
         </div>

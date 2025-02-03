@@ -18,9 +18,7 @@ const __dirname = path.dirname(__filename); //FOR DEPLOYMENT
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(
-  cors({ credentials: true, origin: `${process.env.LOCAL_DEPLOYMENT_URL}` })
-);
+app.use(cors({ credentials: true, origin: `${process.env.CLIENT_URL}` }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "../../client/dist/"))); //FOR DEPLOYMENT
 

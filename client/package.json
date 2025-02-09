@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "deploy": "npm install && vite build"
+    "deploy": "npm install --force && vite build"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.22.10",

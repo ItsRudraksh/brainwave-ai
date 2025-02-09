@@ -11,7 +11,7 @@ import User from "./User";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { coldarkDark as SyntaxTheme } from "react-syntax-highlighter/dist/esm/styles/prism";
 
-const NewPrompt = ({ data }) => {
+const NewPrompt = ({ data, hiddenIndex, setHiddenIndex }) => {
   const components = {
     code({ node, inline, className, children, ...props }) {
       const match = /language-(\w+)/.exec(className || "");
@@ -171,6 +171,9 @@ const NewPrompt = ({ data }) => {
     if (img.dbData) {
       setDone(true);
     }
+    if (hiddenIndex === 0) {
+      setHiddenIndex(1);
+    }
     e.target.text.value = "";
     promptAI(text, false);
   };
@@ -199,7 +202,11 @@ const NewPrompt = ({ data }) => {
         />
       )}
       {userprompt && (
-        <div className="p-5 bg-[#2c2937] rounded-[20px] max-w-[80%] self-end flex flex-col">
+        <div
+          className={`p-5 bg-[#2c2937] rounded-[20px] max-w-[80%] self-end flex flex-col ${
+            hiddenIndex === 1 ? "hidden" : ""
+          }`}
+        >
           <div className="self-end">
             <User bgColor="ac6aff" />
           </div>

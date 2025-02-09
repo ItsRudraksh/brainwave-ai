@@ -9,8 +9,10 @@ import User from "../components/User";
 import Loader from "../components/Loader";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { coldarkDark as SyntaxTheme } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { useState } from "react";
 
 const Chat = () => {
+  const [hiddenIndex, setHiddenIndex] = useState(0);
   // Function to copy text & show toast
   const copyToClipboard = (text) => {
     navigator.clipboard
@@ -89,11 +91,11 @@ const Chat = () => {
                   />
                 )}
                 <div
-                  className={`${
+                  className={`p-5 ${
                     message.role === "user"
-                      ? "p-5 bg-[#2c2937] rounded-[20px] flex flex-col max-w-[80%] self-end"
-                      : "p-5 bg-[#2a2732] rounded-[20px]"
-                  }`}
+                      ? "bg-[#2c2937] rounded-[20px] max-w-[80%] self-end"
+                      : "bg-[#2a2732] rounded-[20px]"
+                  } ${hiddenIndex === i ? "hidden" : ""}`} // Hide first user message
                   key={i}
                 >
                   {message.role === "user" ? (
@@ -128,7 +130,13 @@ const Chat = () => {
               </>
             ))
           )}
-          {data && <NewPrompt data={data} />}
+          {data && (
+            <NewPrompt
+              data={data}
+              hiddenIndex={hiddenIndex}
+              setHiddenIndex={setHiddenIndex}
+            />
+          )}
         </div>
       </div>
     </div>

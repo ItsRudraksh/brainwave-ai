@@ -6,6 +6,7 @@ import authRoutes from "./routes/auth.js";
 import chatRoutes from "./routes/chat.js";
 import imagekitRoutes from "./routes/imagekit.js";
 import { verifyToken } from "./middleware/verifyToken.js";
+// import { clerkMiddleware } from "@clerk/express";
 import path from "path";
 import url from "url";
 
@@ -20,6 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cors({ credentials: true, origin: `${process.env.CLIENT_URL}` }));
 app.use(cookieParser());
+// app.use(clerkMiddleware());
 app.use(express.static(path.join(__dirname, "../../client/dist/"))); //FOR DEPLOYMENT
 
 // Routes

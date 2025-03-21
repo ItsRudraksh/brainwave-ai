@@ -19,7 +19,7 @@ const app = express();
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(cors({ credentials: true, origin: `${process.env.CLIENT_URL}` }));
+app.use(cors({ credentials: true, origin: `${process.env.CLIENT_URL}`, methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Authorization'], }));
 app.use(cookieParser());
 // app.use(clerkMiddleware());
 // app.use(express.static(path.join(__dirname, "../../client/dist/"))); //FOR DEPLOYMENT

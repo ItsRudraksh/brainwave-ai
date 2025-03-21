@@ -4,7 +4,7 @@ import { connectToDB } from "./src/config/db.js";
 import job from "./src/job/job.js";
 dotenv.config();
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 8000;
 job.start();
 
 app.listen(port, () => {

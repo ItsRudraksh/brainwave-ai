@@ -17,7 +17,7 @@ export const singnupUser = async (req, res) => {
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
-    res.cookie("token", token, { httpOnly: true, maxAge: 3600000 }); // 1 hour
+    res.cookie("token", token, { httpOnly: true, maxAge: 3600000, sameSite: 'none', secure: true }); // 1 hour
 
     res
       .status(201)
@@ -45,7 +45,7 @@ export const loginUser = async (req, res) => {
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
-    res.cookie("token", token, { httpOnly: true, maxAge: 3600000 }); // 1 hour
+    res.cookie("token", token, { httpOnly: true, maxAge: 3600000, sameSite: 'none', secure: true }); // 1 hour
 
     res.json({ message: "Logged in successfully", userId: user._id });
   } catch (error) {
@@ -54,7 +54,7 @@ export const loginUser = async (req, res) => {
 };
 
 export const logoutUser = (req, res) => {
-  res.clearCookie("token");
+  res.clearCookie("token", { sameSite: 'none', secure: true });
   res.json({ message: "Logged out successfully" });
 };
 

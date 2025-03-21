@@ -1,11 +1,11 @@
 import app from "./src/app.js";
 import dotenv from "dotenv";
 import { connectToDB } from "./src/config/db.js";
-import job from "./src/job/job.js";
+// import job from "./src/job/job.js";
 dotenv.config();
 
 const port = process.env.PORT || 8000;
-job.start();
+// job.start();
 
 app.listen(port, () => {
   connectToDB();

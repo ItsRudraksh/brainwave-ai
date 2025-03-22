@@ -3,11 +3,17 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Loader from "./Loader";
 import { brainwaveSymbol } from "../assets";
+import { useState, useRef, useEffect } from "react";
+import { PencilIcon, CheckIcon, XIcon } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 const ChatList = ({ handleMenu }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [editingChatId, setEditingChatId] = useState(null);
+  const [titleInput, setTitleInput] = useState("");
+  const titleInputRef = useRef(null);
 
   const { isPending, error, data } = useQuery({
     queryKey: ["userChats"],
@@ -29,12 +35,80 @@ const ChatList = ({ handleMenu }) => {
     },
   });
 
+  // Title update mutation
+  const titleMutation = useMutation({
+    mutationFn: ({ chatId, title }) => {
+      return fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/v1/chat/${chatId}/title`,
+        {
+          method: "PATCH",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ title }),
+        }
+      ).then((res) => {
+        if (!res.ok) {
+          throw new Error('Failed to update chat title');
+        }
+        return res.json();
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userChats"] });
+      setEditingChatId(null);
+      toast.success("Chat title updated!");
+    },
+    onError: (err) => {
+      toast.error(`Failed to update title: ${err.message}`);
+    },
+  });
+
+  // Focus on input when editing starts
+  useEffect(() => {
+    if (editingChatId && titleInputRef.current) {
+      titleInputRef.current.focus();
+    }
+  }, [editingChatId]);
+
   const isActive = (path) => {
     return location.pathname === path ? "bg-[#2c2937] rounded-xl" : "";
   };
 
   const handleDelete = (chatId) => {
     deleteMutation.mutate(chatId);
+  };
+
+  // Start editing a chat title
+  const handleEditClick = (e, chat) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingChatId(chat.chatId);
+    setTitleInput(chat.chatTitle);
+  };
+
+  // Save the edited title
+  const handleSaveTitle = (chatId) => {
+    if (titleInput.trim() === "") {
+      toast.error("Title cannot be empty");
+      return;
+    }
+    titleMutation.mutate({ chatId, title: titleInput });
+  };
+
+  // Cancel editing
+  const handleCancelEdit = () => {
+    setEditingChatId(null);
+  };
+
+  // Handle keyboard events in title input
+  const handleKeyDown = (e, chatId) => {
+    if (e.key === "Enter") {
+      handleSaveTitle(chatId);
+    } else if (e.key === "Escape") {
+      handleCancelEdit();
+    }
   };
 
   return (
@@ -86,19 +160,68 @@ const ChatList = ({ handleMenu }) => {
                 `/dashboard/chats/${chat.chatId}`
               )}`}
             >
-              <Link
-                className={`flex-grow p-3`}
-                to={`/dashboard/chats/${chat.chatId}`}
-              >
-                <p className="text-ellipsis line-clamp-1">{chat.chatTitle}</p>
-              </Link>
-              <button
-                title="Delete Chat"
-                onClick={() => handleDelete(chat.chatId)}
-                className="hover:bg-[#2c2937] rounded-full p-2 focus:outline-none"
-              >
-                <i className="fa-solid fa-trash-xmark"></i>
-              </button>
+              {editingChatId === chat.chatId ? (
+                <div className="flex items-center p-2 flex-grow gap-1">
+                  <input
+                    ref={titleInputRef}
+                    type="text"
+                    value={titleInput}
+                    onChange={(e) => setTitleInput(e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, chat.chatId)}
+                    className="bg-[#3a3744] text-white px-2 py-1 rounded-md w-full outline-none focus:ring-1 focus:ring-[#ac6aff]"
+                    placeholder="Enter chat title..."
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSaveTitle(chat.chatId);
+                    }}
+                    className="p-1 bg-[#ac6aff] rounded-md hover:bg-opacity-80 transition-all"
+                    title="Save"
+                  >
+                    <CheckIcon size={16} className="text-white" />
+                  </button>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCancelEdit();
+                    }}
+                    className="p-1 bg-[#4d4d57] rounded-md hover:bg-opacity-80 transition-all"
+                    title="Cancel"
+                  >
+                    <XIcon size={16} className="text-white" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <Link
+                    className="flex-grow p-3"
+                    to={`/dashboard/chats/${chat.chatId}`}
+                  >
+                    <p className="text-ellipsis line-clamp-1">{chat.chatTitle}</p>
+                  </Link>
+                  <div className="flex items-center">
+                    <button
+                      title="Edit Title"
+                      onClick={(e) => handleEditClick(e, chat)}
+                      className="hover:bg-[#2c2937] rounded-full p-2 focus:outline-none text-gray-400 hover:text-white transition-colors"
+                    >
+                      <PencilIcon size={14} />
+                    </button>
+                    <button
+                      title="Delete Chat"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(chat.chatId);
+                      }}
+                      className="hover:bg-[#2c2937] rounded-full p-2 focus:outline-none"
+                    >
+                      <i className="fa-solid fa-trash-xmark"></i>
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           ))
         )}

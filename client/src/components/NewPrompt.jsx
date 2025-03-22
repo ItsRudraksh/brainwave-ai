@@ -34,6 +34,7 @@ const NewPrompt = ({ data, hiddenIndex, setHiddenIndex }) => {
 
   const [userprompt, setUserPrompt] = useState("");
   const [answer, setAnswer] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
   const [img, setImg] = useState({
     isLoading: false,
     error: "",
@@ -67,7 +68,12 @@ const NewPrompt = ({ data, hiddenIndex, setHiddenIndex }) => {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: () => {
+    mutationFn: (finalAnswer) => {
+      if (!data || !data._id) {
+        console.error("Chat ID is missing or invalid");
+        return Promise.reject(new Error("Chat ID is missing or invalid"));
+      }
+      
       return fetch(
         `${import.meta.env.VITE_BACKEND_URL}/api/v1/chat/${data._id}`,
         {
@@ -78,15 +84,20 @@ const NewPrompt = ({ data, hiddenIndex, setHiddenIndex }) => {
           },
           body: JSON.stringify({
             userprompt: userprompt.length ? userprompt : undefined,
-            answer,
+            answer: finalAnswer || answer,
             img: img.dbData?.filePath || undefined,
           }),
         }
-      ).then((res) => res.json());
+      ).then((res) => {
+        if (!res.ok) {
+          throw new Error('Failed to save chat');
+        }
+        return res.json();
+      });
     },
-    onSuccess: () => {
+    onSuccess: (responseData) => {
       queryClient
-        .invalidateQueries({ queryKey: ["chat", data._id] })
+        .invalidateQueries({ queryKey: ["chat", data?._id] })
         .then(() => {
           formRef.current.reset();
           setUserPrompt("");
@@ -101,7 +112,8 @@ const NewPrompt = ({ data, hiddenIndex, setHiddenIndex }) => {
         });
     },
     onError: (err) => {
-      console.log(err);
+      console.error("Failed to save chat:", err);
+      setIsProcessing(false);
     },
   });
 
@@ -146,21 +158,75 @@ const NewPrompt = ({ data, hiddenIndex, setHiddenIndex }) => {
     };
   }, [img.dbData?.fileId]);
 
+  const retryOperation = async (operation, maxRetries = 3, delay = 1000) => {
+    let lastError;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        console.log(`Attempt ${attempt} failed: ${error.message}`);
+        lastError = error;
+        
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 2;
+        }
+      }
+    }
+    
+    throw lastError;
+  };
+
   const promptAI = async (prompt, isInitial) => {
     if (!isInitial) setUserPrompt(prompt);
+    
+    setIsProcessing(true);
+    
     try {
       setUserPrompt(prompt);
-      const result = await chat.sendMessageStream(
-        Object.entries(img.aiData).length ? [img.aiData, prompt] : [prompt]
+      
+      const result = await retryOperation(() => 
+        chat.sendMessageStream(
+          Object.entries(img.aiData).length ? [img.aiData, prompt] : [prompt]
+        )
       );
-      for await (const chunk of result.stream) {
-        const chunkText = chunk.text();
-        setAnswer((prev) => prev + chunkText);
+      
+      setAnswer("");
+      
+      const chunks = [];
+      
+      try {
+        for await (const chunk of result.stream) {
+          const chunkText = chunk.text();
+          chunks.push(chunkText);
+          setAnswer((prev) => prev + chunkText);
+        }
+      } catch (streamError) {
+        console.error("Stream error:", streamError);
+        if (chunks.length > 0) {
+          const partialResponse = chunks.join('');
+          setAnswer(partialResponse + "\n\n[Response was incomplete due to a connection issue]");
+        } else {
+          throw streamError;
+        }
       }
-      mutation.mutate();
-      console.log(data?.history);
+      
+      const finalAnswer = chunks.length > 0 ? chunks.join('') : answer;
+      
+      if (finalAnswer) {
+        try {
+          await mutation.mutateAsync(finalAnswer);
+        } catch (mutationError) {
+          console.error("Failed to save the chat:", mutationError);
+          return;
+        }
+      }
     } catch (error) {
-      console.log(error);
+      console.error("Error from Gemini API:", error);
+      setAnswer(prev => prev + "\n\nSorry, there was an error: " + (error.message || "Unknown error occurred. Please try again."));
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -178,7 +244,6 @@ const NewPrompt = ({ data, hiddenIndex, setHiddenIndex }) => {
     promptAI(text, false);
   };
 
-  // IN PRODUCTION WE DON'T NEED IT
   const hasRun = useRef(false);
 
   useEffect(() => {
@@ -193,35 +258,42 @@ const NewPrompt = ({ data, hiddenIndex, setHiddenIndex }) => {
   return (
     <>
       {img.dbData?.filePath && done && (
-        <IKImage
-          urlEndpoint={import.meta.env.VITE_IMAGEKIT_URL_ENDPOINT}
-          path={img.dbData?.filePath}
-          width="380"
-          transformation={[{ width: 380 }]}
-          className="self-end"
-        />
-      )}
-      {userprompt && (
-        <div
-          className={`p-5 bg-[#2c2937] rounded-[20px] max-w-[80%] self-end flex flex-col ${
-            hiddenIndex === 1 ? "hidden" : ""
-          }`}
-        >
-          <div className="self-end">
-            <User bgColor="ac6aff" />
-          </div>
-          {userprompt}
+        <div className="flex justify-end">
+          <IKImage
+            urlEndpoint={import.meta.env.VITE_IMAGEKIT_URL_ENDPOINT}
+            path={img.dbData?.filePath}
+            width="380"
+            transformation={[{ width: 380 }]}
+          />
         </div>
       )}
-      {answer && (
-        <div className="p-5 bg-[#2a2732] rounded-[20px]">
-          <div className="w-8 h-9 mb-3">
-            <img src={brainwaveSymbol} alt="" />
-          </div>
-          <Markdown components={components} className={`leading-8`}>
-            {answer}
-          </Markdown>
-        </div>
+      {isProcessing && (
+        <>
+          {userprompt && (
+            <div className="flex flex-col items-end">
+              <div
+                className={`p-5 bg-[#2c2937] rounded-[20px] max-w-[80%] flex flex-col ${
+                  hiddenIndex === 1 ? "hidden" : ""
+                }`}
+              >
+                <div className="self-end">
+                  <User bgColor="ac6aff" />
+                </div>
+                {userprompt}
+              </div>
+            </div>
+          )}
+          {answer && (
+            <div className="p-5 bg-[#2a2732] rounded-[20px]">
+              <div className="w-8 h-9 mb-3">
+                <img src={brainwaveSymbol} alt="" />
+              </div>
+              <Markdown components={components} className={`leading-8`}>
+                {answer}
+              </Markdown>
+            </div>
+          )}
+        </>
       )}
       <div className="pb-[100px]" ref={endRef}></div>
       <form
@@ -229,7 +301,7 @@ const NewPrompt = ({ data, hiddenIndex, setHiddenIndex }) => {
         onSubmit={handleSubmit}
         ref={formRef}
       >
-        <div className="flex">
+        <div className="flex justify-end">
           {img.isLoading && (
             <div className="p-3">
               <Loader />
@@ -242,7 +314,7 @@ const NewPrompt = ({ data, hiddenIndex, setHiddenIndex }) => {
                 path={img.dbData?.filePath}
                 width="380"
                 transformation={[{ width: 380 }]}
-                className="self-end py-2"
+                className="py-2"
               />
               <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <p className="text-white text-center">

@@ -9,6 +9,7 @@ export const handleChatMessage = async (req, res) => {
     // CREATE A NEW CHAT
     const newChat = new Chat({
       userId: userId,
+      chatTitle: text.length > 30 ? text.substring(0, 30) + "..." : text, // Set initial chat title based on first message
       history: [{ role: "user", parts: [{ text }] }],
     });
     const savedChat = await newChat.save();
@@ -23,7 +24,7 @@ export const handleChatMessage = async (req, res) => {
         chats: [
           {
             chatId: savedChat._id,
-            chatTitle: text,
+            chatTitle: text.length > 30 ? text.substring(0, 30) + "..." : text, // Limit title length
           },
         ],
       });
@@ -36,7 +37,7 @@ export const handleChatMessage = async (req, res) => {
           $push: {
             chats: {
               chatId: savedChat._id,
-              chatTitle: text,
+              chatTitle: text.length > 30 ? text.substring(0, 30) + "..." : text, // Limit title length
             },
           },
         }
@@ -72,6 +73,20 @@ export const getChat = async (req, res) => {
 
   try {
     const chat = await Chat.findOne({ _id: req.params.id, userId });
+    
+    if (!chat) {
+      return res.status(404).json({ message: "Chat not found" });
+    }
+
+    // Ensure chat has a title, use default if not set
+    if (!chat.chatTitle) {
+      chat.chatTitle = chat.history && chat.history.length > 0 && chat.history[0].parts[0]
+        ? (chat.history[0].parts[0].text.length > 30 
+            ? chat.history[0].parts[0].text.substring(0, 30) + "..." 
+            : chat.history[0].parts[0].text)
+        : "New Chat";
+      await chat.save();
+    }
 
     res.status(200).send(chat);
   } catch (err) {
@@ -154,5 +169,54 @@ export const deleteChat = async (req, res) => {
     res
       .status(500)
       .json({ message: "An error occurred while deleting the chat" });
+  }
+};
+
+export const updateChatTitle = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+  const { title } = req.body;
+
+  if (!title || title.trim() === '') {
+    return res.status(400).json({ message: "Chat title cannot be empty" });
+  }
+
+  try {
+    // Find the userChats document
+    const userChats = await UserChats.findOne({ userId });
+
+    if (!userChats) {
+      return res.status(404).json({ message: "User chats not found" });
+    }
+
+    // Update the chat title in the userChats document
+    const chatIndex = userChats.chats.findIndex(
+      (chat) => chat.chatId.toString() === id
+    );
+
+    if (chatIndex === -1) {
+      return res.status(404).json({ message: "Chat not found" });
+    }
+
+    // Update the chat title
+    userChats.chats[chatIndex].chatTitle = title;
+    await userChats.save();
+
+    // Also update the chat document to include the title for convenience
+    await Chat.findOneAndUpdate(
+      { _id: id, userId },
+      { $set: { chatTitle: title } },
+      { new: true }
+    );
+
+    res.status(200).json({ 
+      message: "Chat title updated successfully",
+      title
+    });
+  } catch (error) {
+    console.error("Error updating chat title:", error);
+    res.status(500).json({ 
+      message: "An error occurred while updating the chat title" 
+    });
   }
 };

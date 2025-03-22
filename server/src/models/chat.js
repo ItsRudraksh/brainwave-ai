@@ -7,6 +7,10 @@ const chatSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    chatTitle: {
+      type: String,
+      default: "New Chat",
+    },
     history: [
       {
         role: {

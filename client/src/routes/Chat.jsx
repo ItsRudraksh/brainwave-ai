@@ -13,6 +13,7 @@ import { useState } from "react";
 
 const Chat = () => {
   const [hiddenIndex, setHiddenIndex] = useState(0);
+  
   // Function to copy text & show toast
   const copyToClipboard = (text) => {
     navigator.clipboard
@@ -70,33 +71,32 @@ const Chat = () => {
   return (
     <div className="h-full flex flex-col items-center relative pt-11">
       <div className="flex-1 overflow-scroll w-full flex justify-center">
-        <div className="w-[75%] ml-10 lg:ml-0 lg:w-1/2 flex flex-col gap-5">
+        <div className="w-[75%] max-w-[1000px] ml-10 lg:ml-0 lg:w-1/2 flex flex-col gap-5">
           {isPending ? (
             <Loader />
           ) : error ? (
             "Something went wrong!"
           ) : (
             data?.history?.map((message, i) => (
-              <>
+              <div key={`message-${i}`} className={message.role === "user" ? "flex flex-col items-end" : ""}>
                 {message.img && (
                   <IKImage
-                    key={i}
+                    key={`img-${i}`}
                     urlEndpoint={import.meta.env.VITE_IMAGEKIT_URL_ENDPOINT}
                     path={message.img}
                     height="300"
                     width="400"
                     loading="lazy"
                     lqip={{ active: true, quality: 20 }}
-                    className="self-end object-contain"
+                    className="object-contain"
                   />
                 )}
                 <div
                   className={`p-5 ${
                     message.role === "user"
-                      ? "bg-[#2c2937] rounded-[20px] max-w-[80%] self-end"
+                      ? "bg-[#2c2937] rounded-[20px] max-w-[80%]"
                       : "bg-[#2a2732] rounded-[20px]"
                   } ${hiddenIndex === i ? "hidden" : ""}`} // Hide first user message
-                  key={i}
                 >
                   {message.role === "user" ? (
                     <div className="self-end">
@@ -110,9 +110,7 @@ const Chat = () => {
                   <Markdown
                     components={components}
                     className={`${
-                      message.role === "user leading-8"
-                        ? ""
-                        : "overflow-x-scroll leading-8"
+                      message.role === "user" ? "leading-8" : "overflow-x-scroll leading-8"
                     }`}
                   >
                     {message.parts[0].text}
@@ -127,7 +125,7 @@ const Chat = () => {
                     </button>
                   )}
                 </div>
-              </>
+              </div>
             ))
           )}
           {data && (
